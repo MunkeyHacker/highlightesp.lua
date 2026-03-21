@@ -16,6 +16,7 @@ local ESPObjects = {}
 local Loop
 
 local function removeESP(plr)
+
 	if ESPObjects[plr] then
 		
 		if ESPObjects[plr].Highlight then
@@ -33,6 +34,7 @@ local function removeESP(plr)
 		ESPObjects[plr] = nil
 		
 	end
+	
 end
 
 local function createESP(plr)
@@ -46,7 +48,6 @@ local function createESP(plr)
 		local highlight = Instance.new("Highlight")
 		highlight.FillColor = module.Color
 		highlight.FillTransparency = module.Transparency
-		highlight.OutlineTransparency = 0
 		highlight.Parent = char
 		
 		local name = Instance.new("BillboardGui")
@@ -73,8 +74,8 @@ local function createESP(plr)
 		ESPObjects[plr] = {
 			Highlight = highlight,
 			Tracer = tracer,
-			Name = name,
-			Label = label
+			Label = label,
+			Name = name
 		}
 		
 	end
@@ -100,7 +101,7 @@ function module.start()
 	Players.PlayerAdded:Connect(createESP)
 	
 	Loop = RunService.RenderStepped:Connect(function()
-		
+
 		if not module.Enabled then return end
 		
 		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -124,7 +125,6 @@ function module.start()
 				local pos,onscreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
 				
 				data.Tracer.Visible = onscreen and myOnScreen
-				
 				data.Tracer.From = Vector2.new(myPos.X,myPos.Y)
 				data.Tracer.To = Vector2.new(pos.X,pos.Y)
 				data.Tracer.Color = module.Color
@@ -154,20 +154,9 @@ function module.stop()
 	
 end
 
-function module.setColor(c)
-	module.Color = c
-end
-
-function module.setTransparency(v)
-	module.Transparency = v
-end
-
-function module.setTracer(state)
-	module.Tracers = state
-end
-
-function module.setTextSize(v)
-	module.TextSize = v
-end
+function module.setColor(v) module.Color = v end
+function module.setTransparency(v) module.Transparency = v end
+function module.setTracer(v) module.Tracers = v end
+function module.setTextSize(v) module.TextSize = v end
 
 return module
