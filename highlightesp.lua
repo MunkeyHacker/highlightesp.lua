@@ -10,14 +10,38 @@ module.Color = Color3.fromRGB(255,0,0)
 module.Transparency = 0.5
 module.Tracers = false
 module.Enabled = false
+module.TextSize = 14
 
 local ESPObjects = {}
+local Loop
+
+local function removeESP(plr)
+	if ESPObjects[plr] then
+		
+		if ESPObjects[plr].Highlight then
+			ESPObjects[plr].Highlight:Destroy()
+		end
+		
+		if ESPObjects[plr].Tracer then
+			ESPObjects[plr].Tracer:Remove()
+		end
+		
+		if ESPObjects[plr].Name then
+			ESPObjects[plr].Name:Destroy()
+		end
+		
+		ESPObjects[plr] = nil
+		
+	end
+end
 
 local function createESP(plr)
 
 	if plr == LocalPlayer then return end
 	
 	local function apply(char)
+
+		removeESP(plr)
 
 		local highlight = Instance.new("Highlight")
 		highlight.FillColor = module.Color
@@ -34,18 +58,23 @@ local function createESP(plr)
 		local label = Instance.new("TextLabel")
 		label.Size = UDim2.new(1,0,1,0)
 		label.BackgroundTransparency = 1
-		label.TextScaled = true
+		label.TextScaled = false
+		label.TextSize = module.TextSize
+		label.Font = Enum.Font.SourceSansBold
 		label.TextColor3 = Color3.new(1,1,1)
+		label.TextStrokeTransparency = 0
 		label.Text = plr.Name
 		label.Parent = name
 		
 		local tracer = Drawing.new("Line")
 		tracer.Visible = false
+		tracer.Thickness = 2
 		
 		ESPObjects[plr] = {
 			Highlight = highlight,
 			Tracer = tracer,
-			Name = name
+			Name = name,
+			Label = label
 		}
 		
 	end
@@ -60,6 +89,8 @@ end
 
 function module.start()
 
+	if module.Enabled then return end
+	
 	module.Enabled = true
 	
 	for _,plr in pairs(Players:GetPlayers()) do
@@ -68,24 +99,19 @@ function module.start()
 	
 	Players.PlayerAdded:Connect(createESP)
 	
-	RunService.RenderStepped:Connect(function()
+	Loop = RunService.RenderStepped:Connect(function()
 		
 		if not module.Enabled then return end
 		
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if not myRoot then return end
+		
+		local myPos, myOnScreen = Camera:WorldToViewportPoint(myRoot.Position)
+		
 		for plr,data in pairs(ESPObjects) do
 			
-			if module.Tracers and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-				
-				local pos,onscreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-				
-				data.Tracer.Visible = onscreen
-				
-				data.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-				data.Tracer.To = Vector2.new(pos.X,pos.Y)
-				data.Tracer.Color = module.Color
-				
-			else
-				data.Tracer.Visible = false
+			if data.Label then
+				data.Label.TextSize = module.TextSize
 			end
 			
 			if data.Highlight then
@@ -93,10 +119,39 @@ function module.start()
 				data.Highlight.FillTransparency = module.Transparency
 			end
 			
+			if module.Tracers and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				
+				local pos,onscreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+				
+				data.Tracer.Visible = onscreen and myOnScreen
+				
+				data.Tracer.From = Vector2.new(myPos.X,myPos.Y)
+				data.Tracer.To = Vector2.new(pos.X,pos.Y)
+				data.Tracer.Color = module.Color
+				
+			else
+				data.Tracer.Visible = false
+			end
+			
 		end
 		
 	end)
 
+end
+
+function module.stop()
+
+	module.Enabled = false
+	
+	if Loop then
+		Loop:Disconnect()
+		Loop = nil
+	end
+	
+	for plr,_ in pairs(ESPObjects) do
+		removeESP(plr)
+	end
+	
 end
 
 function module.setColor(c)
@@ -109,6 +164,10 @@ end
 
 function module.setTracer(state)
 	module.Tracers = state
+end
+
+function module.setTextSize(v)
+	module.TextSize = v
 end
 
 return module
