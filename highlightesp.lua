@@ -25,23 +25,22 @@ local PlayerAddedConnection
 
 local function removeESP(plr)
 
-    if ESPObjects[plr] then
+    local data = ESPObjects[plr]
+    if not data then return end
 
-        if ESPObjects[plr].Highlight then
-            ESPObjects[plr].Highlight:Destroy()
-        end
-
-        if ESPObjects[plr].Tracer then
-            ESPObjects[plr].Tracer:Remove()
-        end
-
-        if ESPObjects[plr].Name then
-            ESPObjects[plr].Name:Destroy()
-        end
-
-        ESPObjects[plr] = nil
-
+    if data.Highlight then
+        data.Highlight:Destroy()
     end
+
+    if data.Tracer then
+        data.Tracer:Remove()
+    end
+
+    if data.Name then
+        data.Name:Destroy()
+    end
+
+    ESPObjects[plr] = nil
 
 end
 
@@ -53,6 +52,9 @@ local function createESP(plr)
 
         removeESP(plr)
 
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
         local highlight = Instance.new("Highlight")
         highlight.FillColor = module.Color
         highlight.FillTransparency = module.Transparency
@@ -62,7 +64,7 @@ local function createESP(plr)
         name.Size = UDim2.new(0,200,0,50)
         name.AlwaysOnTop = true
         name.StudsOffset = Vector3.new(0,3,0)
-        name.Parent = char
+        name.Parent = root
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1,0,1,0)
@@ -78,6 +80,7 @@ local function createESP(plr)
         local tracer = Drawing.new("Line")
         tracer.Visible = false
         tracer.Thickness = 2
+        tracer.Color = module.Color
 
         ESPObjects[plr] = {
             Highlight = highlight,
@@ -101,7 +104,7 @@ function module.enable()
     if module.Enabled then return end
     module.Enabled = true
 
-    for _,plr in pairs(Players:GetPlayers()) do
+    for _,plr in ipairs(Players:GetPlayers()) do
         createESP(plr)
     end
 
@@ -111,7 +114,8 @@ function module.enable()
 
         if not module.Enabled then return end
 
-        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local myChar = LocalPlayer.Character
+        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
         if not myRoot then return end
 
         local myPos, myOnScreen = Camera:WorldToViewportPoint(myRoot.Position)
@@ -127,14 +131,21 @@ function module.enable()
                 data.Highlight.FillTransparency = module.Transparency
             end
 
-            if module.Tracers and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if module.Tracers and plr.Character then
 
-                local pos,onscreen = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                if root then
 
-                data.Tracer.Visible = onscreen and myOnScreen
-                data.Tracer.From = Vector2.new(myPos.X,myPos.Y)
-                data.Tracer.To = Vector2.new(pos.X,pos.Y)
-                data.Tracer.Color = module.Color
+                    local pos,onscreen = Camera:WorldToViewportPoint(root.Position)
+
+                    data.Tracer.Visible = onscreen and myOnScreen
+                    data.Tracer.From = Vector2.new(myPos.X,myPos.Y)
+                    data.Tracer.To = Vector2.new(pos.X,pos.Y)
+                    data.Tracer.Color = module.Color
+
+                else
+                    data.Tracer.Visible = false
+                end
 
             else
                 data.Tracer.Visible = false
@@ -170,12 +181,12 @@ function module.init(ctx)
 
     local box = ctx.box
 
-    box:AddToggle("ESPToggle",{Text="Enable ESP"})
+    box:AddToggle("ESPToggle",{Text="Enable ESP", Default=false})
     Toggles.ESPToggle:OnChanged(function(v)
         if v then module.enable() else module.disable() end
     end)
 
-    box:AddToggle("TracerToggle",{Text="Tracers"})
+    box:AddToggle("TracerToggle",{Text="Tracers", Default=false})
     Toggles.TracerToggle:OnChanged(function()
         module.Tracers = Toggles.TracerToggle.Value
     end)
